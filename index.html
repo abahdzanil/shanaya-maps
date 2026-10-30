@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Peta Shanaya Resort</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""></script>
+<style>
+  :root{
+    --bg:#eef1f6; --fg:#13203a; --muted:#5a6578; --accent:#1c3c6e; --accent2:#3c5a86;
+    --card:#ffffff; --line:#d7dde6;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#0b1220; --fg:#e6ebf3; --muted:#8c96ab; --accent:#5b86c4; --accent2:#3c5a86; --card:#121b2e; --line:#223049; }
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
+    background:var(--bg); color:var(--fg);
+    display:flex; flex-direction:column;
+  }
+  header{
+    padding:14px max(16px, env(safe-area-inset-left,0px)) 10px max(16px, env(safe-area-inset-left,0px));
+    border-bottom:1px solid var(--line);
+    background:var(--card);
+    display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+  }
+  header h1{font-size:16px; margin:0; font-weight:600;}
+  header p{font-size:12px; margin:2px 0 0; color:var(--muted);}
+  #map{position:absolute; inset:0;}
+  .controls{
+    position:absolute; z-index:500; right:10px; bottom:18px;
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .btn{
+    background:var(--card); color:var(--fg); border:1px solid var(--line);
+    padding:9px 12px; border-radius:6px; font-size:13px; font-weight:600;
+    box-shadow:0 1px 3px rgba(19,32,58,.15); cursor:pointer;
+  }
+  .btn.primary{background:var(--accent); color:#fff; border-color:var(--accent);}
+  .btn.active{background:var(--accent2); color:#fff; border-color:var(--accent2);}
+  #legend{
+    position:relative; background:var(--card); border-top:1px solid var(--line);
+    max-height:34vh; overflow-y:auto; padding:10px max(16px, env(safe-area-inset-left,0px));
+  }
+  #legend h2{font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin:6px 0;}
+  .poi-row{
+    display:flex; align-items:center; gap:8px; padding:7px 4px; border-bottom:1px solid var(--line);
+    font-size:13px; cursor:pointer;
+  }
+  .poi-row:last-child{border-bottom:none;}
+  .tag{
+    flex:none; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:800; color:#fff;
+  }
+  .tag.main{background:var(--accent);}
+  .tag.minor{background:var(--muted);}
+  .poi-name{flex:1;}
+  .poi-dist{font-size:11px; color:var(--muted); white-space:nowrap;}
+  #note{font-size:11px; color:var(--muted); padding:8px max(16px, env(safe-area-inset-left,0px)) 10px; background:var(--card);}
+  .calib-bar{
+    display:none; position:absolute; z-index:600; left:10px; right:10px; top:10px;
+    background:var(--accent); color:#fff; padding:10px 12px; border-radius:6px; font-size:12px;
+    box-shadow:0 1px 4px rgba(19,32,58,.25); align-items:center; justify-content:space-between; gap:8px;
+  }
+  .calib-bar.show{display:flex;}
+  .calib-bar button{border:1px solid rgba(255,255,255,.4); background:transparent; color:#fff; padding:6px 10px; border-radius:5px; font-size:12px; font-weight:600;}
+  .route-bar{
+    display:none; position:absolute; z-index:600; left:10px; right:140px; bottom:18px;
+    background:var(--card); color:var(--fg); border:1px solid var(--line); padding:8px 10px; border-radius:6px;
+    font-size:12px; box-shadow:0 1px 4px rgba(19,32,58,.25); flex-direction:column; gap:6px;
+  }
+  .route-bar.show{display:flex;}
+  .route-bar b{font-size:13px;}
+  .route-bar .actions{display:flex; gap:6px; flex-wrap:wrap;}
+  .mini-btn{
+    background:var(--card); color:var(--fg); border:1px solid var(--line); padding:5px 9px; border-radius:5px;
+    font-size:12px; font-weight:600; cursor:pointer; text-decoration:none; white-space:nowrap;
+  }
+  .mini-btn.primary{background:var(--accent); color:#fff; border-color:var(--accent);}
+  .me-dot{width:14px;height:14px;border-radius:50%;background:var(--accent);border:3px solid #fff;box-shadow:0 0 0 1px var(--accent);}
+  .pin{
+    width:24px; height:24px; border-radius:50% 50% 50% 0; transform:rotate(-45deg);
+    display:flex; align-items:center; justify-content:center; box-shadow:0 1px 3px rgba(19,32,58,.4); border:2px solid #fff;
+  }
+  .pin span{transform:rotate(45deg); font-size:11px; font-weight:800; color:#fff;}
+  .leaflet-popup-content{font-size:13px; margin:8px 10px;}
+  .leaflet-popup-content b{display:block; margin-bottom:2px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Peta Shanaya Resort Malang</h1>
+    <p>Basemap Google &middot; tap titik lalu "Rute jalan kaki" untuk petunjuk arah dari lokasi kamu</p>
+  </div>
+  <button class="btn primary" id="btnLocate">Lokasi saya</button>
+</header>
+
+<div style="position:relative; flex:1; min-height:0;">
+  <div id="map"></div>
+  <div class="calib-bar" id="calibBar">
+    <span id="calibText">Pilih titik di daftar, lalu set ke lokasi GPS kamu sekarang</span>
+    <button id="calibSet">Set ke GPS saya</button>
+  </div>
+  <div class="route-bar" id="routeBar">
+    <div id="routeText"></div>
+    <div class="actions">
+      <a class="mini-btn primary" id="routeGmaps" target="_blank" rel="noopener">Buka di Google Maps</a>
+      <button class="mini-btn" id="routeClear">Tutup rute</button>
+    </div>
+  </div>
+  <div class="controls">
+    <button class="btn" id="btnCalib">Mode kalibrasi</button>
+  </div>
+</div>
+
+<div id="legend">
+  <h2>Titik acara</h2>
+  <div id="mainList"></div>
+  <h2>Fasilitas lain</h2>
+  <div id="minorList"></div>
+</div>
+<div id="note">
+  Posisi titik A–Z adalah perkiraan dari denah cetak panitia, bukan hasil survei GPS — jarak ke tiap titik di sidebar hanya estimasi. Saat kamu sudah di lokasi, pakai "Mode kalibrasi" untuk set ulang titik ke posisi GPS asli; perubahan tersimpan di browser ini saja.
+</div>
+
+<script>
+(function(){
+  // pusat: Shanaya Resort, Ngijo, Karangploso, Malang
+  var CENTER = [-7.900219663011971, 112.61061299596292];
+
+  // offset posisi tiap titik dalam meter (timur +, utara +) relatif ke CENTER,
+  // diestimasikan dari tata letak denah cetak "Map Shanaya" — lihat catatan di bawah peta
+  var POINTS = [
+    {k:'A', name:'Gate', desc:'Pintu masuk resort', dx:-110, dy:-150, main:false},
+    {k:'B', name:'Lobby & Anusapati Restaurant', desc:'Sarapan - Lobby & Restaurant', dx:-80, dy:40, main:true},
+    {k:'C', name:'Parking Area', desc:'Lokasi parkir & pembagian kunci kamar', dx:10, dy:-60, main:true},
+    {k:'D', name:'Meeting Room', desc:'Team Building Pos 3 - Meeting Room Yard (Candi Jago/Jawi/Kidal/Sumberawan)', dx:-20, dy:60, main:true},
+    {k:'E', name:'Musholla', desc:'', dx:-150, dy:10, main:false},
+    {k:'F', name:'Latar Ken Arok', desc:'Team Building Pos 2', dx:5, dy:30, main:true},
+    {k:'G', name:'Pendopo Tohjaya', desc:'', dx:25, dy:55, main:false},
+    {k:'H', name:'Altar Kendedes', desc:'', dx:55, dy:55, main:false},
+    {k:'I', name:'Omah Kendedes', desc:'Venue Gala Dinner dan Api Unggun', dx:70, dy:20, main:true},
+    {k:'J', name:'Pendopo Tunggul Ametung', desc:'Team Building Pos 1', dx:90, dy:-80, main:true},
+    {k:'K', name:'Amphitheater', desc:'', dx:100, dy:30, main:false},
+    {k:'L', name:'Kertanegara Villa', desc:'', dx:50, dy:140, main:false},
+    {k:'M', name:'Singhasari Villa', desc:'', dx:95, dy:-100, main:false},
+    {k:'N', name:'Shanaya Royal Villa', desc:'Kamar - Ranggawuni (area)', dx:120, dy:-140, main:false},
+    {k:'O', name:'Ranggawuni Glamping', desc:'Kamar - Ranggawuni', dx:110, dy:160, main:true},
+    {k:'P', name:'Gayatri Villa', desc:'', dx:15, dy:100, main:false},
+    {k:'Q', name:'Kertarajasa Villa', desc:'', dx:80, dy:150, main:false},
+    {k:'R', name:'Jayakatwang Villa', desc:'', dx:40, dy:190, main:false},
+    {k:'S', name:'Jayakatwang Swimming Pool', desc:'', dx:-10, dy:145, main:false},
+    {k:'T', name:'Jayakatwang Meeting Room', desc:'', dx:0, dy:130, main:false},
+    {k:'U', name:'Ranggawuni Swimming Pool', desc:'', dx:145, dy:100, main:false},
+    {k:'V', name:'Ranggawuni Restaurant & Meeting Room', desc:'', dx:130, dy:90, main:false},
+    {k:'W', name:'Main Pool', desc:'', dx:20, dy:85, main:false},
+    {k:'X', name:'Playground', desc:'', dx:-25, dy:120, main:false},
+    {k:'Y', name:'Security Post', desc:'', dx:-100, dy:-140, main:false},
+    {k:'Z', name:'Paddy Field', desc:'', dx:180, dy:-170, main:false}
+  ];
+
+  function metersToLatLng(dx, dy){
+    var dLat = dy / 111320;
+    var dLon = dx / (111320 * Math.cos(CENTER[0] * Math.PI/180));
+    return [CENTER[0] + dLat, CENTER[1] + dLon];
+  }
+
+  // muat kalibrasi tersimpan (kalau ada) dari localStorage
+  var overrides = {};
+  try {
+    var saved = localStorage.getItem('shanaya_calib');
+    if (saved) overrides = JSON.parse(saved);
+  } catch(e){}
+
+  function pointLatLng(p){
+    if (overrides[p.k]) return [overrides[p.k].lat, overrides[p.k].lng];
+    return metersToLatLng(p.dx, p.dy);
+  }
+  function saveOverrides(){
+    try { localStorage.setItem('shanaya_calib', JSON.stringify(overrides)); } catch(e){}
+  }
+
+  var map = L.map('map', {zoomControl:true}).setView(CENTER, 17);
+  // tile Google langsung (tanpa API key) — lyrs=m: peta jalan, lyrs=y: satelit + label
+  var gRoad = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+    maxZoom: 21, subdomains: ['mt0','mt1','mt2','mt3'], attribution: 'Map data &copy; Google'
+  });
+  var gHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+    maxZoom: 21, subdomains: ['mt0','mt1','mt2','mt3'], attribution: 'Imagery &copy; Google'
+  });
+  var carto = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    maxZoom: 20, subdomains: 'abcd',
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+  });
+  var esri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19, attribution: 'Tiles &copy; Esri'
+  });
+  gRoad.addTo(map);
+  L.control.layers({
+    'Google Maps': gRoad, 'Google Satelit': gHybrid, 'Satelit (Esri)': esri
+  }, null, {position:'topright'}).addTo(map);
+
+  function makePinIcon(letter, main, calibrated){
+    var bg = calibrated ? '#3c5a86' : (main ? '#1c3c6e' : '#5a6578');
+    return L.divIcon({
+      className: '',
+      html: '<div class="pin" style="background:'+bg+'"><span>'+letter+'</span></div>',
+      iconSize:[26,26], iconAnchor:[13,26], popupAnchor:[0,-24]
+    });
+  }
+
+  var markers = {};
+  var selected = null;
+
+  function renderMarker(p){
+    if (markers[p.k]) map.removeLayer(markers[p.k]);
+    var ll = pointLatLng(p);
+    var m = L.marker(ll, {icon: makePinIcon(p.k, p.main, !!overrides[p.k])}).addTo(map);
+    var html = '<b>'+p.k+' &middot; '+p.name+'</b>' + (p.desc ? p.desc : '') +
+      (overrides[p.k] ? '<br><span style="color:#3c5a86">terkalibrasi GPS</span>' : '') +
+      '<br><button class="mini-btn primary route-btn" data-k="'+p.k+'" style="margin-top:6px">Rute jalan kaki</button>';
+    m.bindPopup(html);
+    m.on('click', function(){ selectPoint(p.k); });
+    markers[p.k] = m;
+  }
+  POINTS.forEach(renderMarker);
+
+  // === lokasi pengguna ===
+  var meMarker = null, meCircle = null, watchId = null;
+  var btnLocate = document.getElementById('btnLocate');
+
+  function onPosition(pos){
+    var latlng = [pos.coords.latitude, pos.coords.longitude];
+    if (!meMarker){
+      meMarker = L.marker(latlng, {
+        icon: L.divIcon({className:'', html:'<div class="me-dot"></div>', iconSize:[16,16], iconAnchor:[8,8]}),
+        zIndexOffset: 1000
+      }).addTo(map).bindPopup('Lokasi kamu sekarang');
+      map.setView(latlng, 18);
+    } else {
+      meMarker.setLatLng(latlng);
+    }
+    if (meCircle) map.removeLayer(meCircle);
+    meCircle = L.circle(latlng, {radius: pos.coords.accuracy, color:'#1c3c6e', weight:1, fillOpacity:.1}).addTo(map);
+    window._meLatLng = latlng;
+    updateDistances(latlng);
+    // hitung rute yang menunggu GPS, atau perbarui kalau sudah bergeser > 15 m
+    if (routeTarget && (!routeFrom || haversine(routeFrom, latlng) > 15)) computeRoute(!routeFrom);
+  }
+  function onPositionError(err){
+    alert('Tidak bisa mengambil lokasi GPS: ' + err.message + '\nPastikan izin lokasi browser diaktifkan.');
+  }
+  btnLocate.addEventListener('click', startLocate);
+  function startLocate(){
+    if (!navigator.geolocation){ alert('Browser ini tidak mendukung GPS.'); return; }
+    btnLocate.textContent = 'Mencari...';
+    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+    watchId = navigator.geolocation.watchPosition(function(pos){
+      btnLocate.textContent = 'Lokasi saya';
+      onPosition(pos);
+    }, function(err){ btnLocate.textContent = 'Lokasi saya'; onPositionError(err); },
+    {enableHighAccuracy:true, maximumAge:5000, timeout:15000});
+  }
+
+  // === rute jalan kaki (OSRM profil foot dari FOSSGIS, tanpa API key) ===
+  var routeBar = document.getElementById('routeBar');
+  var routeText = document.getElementById('routeText');
+  var routeGmaps = document.getElementById('routeGmaps');
+  var routeLayer = null, routeTarget = null, routeFrom = null;
+
+  function findPoint(k){ return POINTS.find(function(pp){return pp.k===k;}); }
+  function fmtDist(d){ return d < 1000 ? Math.round(d)+' m' : (d/1000).toFixed(1)+' km'; }
+  function clearRouteLayer(){ if (routeLayer){ map.removeLayer(routeLayer); routeLayer = null; } }
+
+  function routeTo(k){
+    routeTarget = k;
+    routeFrom = null;
+    clearRouteLayer();
+    map.closePopup();
+    routeBar.classList.add('show');
+    if (!window._meLatLng){
+      routeText.textContent = 'Mencari lokasi GPS kamu...';
+      routeGmaps.style.display = 'none';
+      if (watchId === null) startLocate();
+      return;
+    }
+    computeRoute(true);
+  }
+
+  function computeRoute(fit){
+    var p = findPoint(routeTarget);
+    var from = window._meLatLng, to = pointLatLng(p);
+    var reqTarget = routeTarget;
+    routeFrom = from;
+    routeGmaps.style.display = '';
+    routeGmaps.href = 'https://www.google.com/maps/dir/?api=1&travelmode=walking' +
+      '&origin='+from[0]+','+from[1]+'&destination='+to[0]+','+to[1];
+    if (fit) routeText.innerHTML = 'Menghitung rute ke <b>'+p.k+' &middot; '+p.name+'</b>...';
+
+    var url = 'https://routing.openstreetmap.de/routed-foot/route/v1/driving/' +
+      from[1]+','+from[0]+';'+to[1]+','+to[0]+'?overview=full&geometries=geojson';
+    fetch(url).then(function(r){
+      if (!r.ok) throw new Error('HTTP '+r.status);
+      return r.json();
+    }).then(function(data){
+      if (reqTarget !== routeTarget) return;
+      if (data.code !== 'Ok' || !data.routes.length) throw new Error(data.message || 'rute tidak ditemukan');
+      var coords = data.routes[0].geometry.coordinates.map(function(c){ return [c[1], c[0]]; });
+      var start = coords[0], end = coords[coords.length-1];
+      var dashed = {color:'#1c3c6e', weight:3, opacity:.8, dashArray:'4 6'};
+      clearRouteLayer();
+      // garis putus-putus = sambungan dari/ke jalan terdekat yang tidak ada di data peta
+      routeLayer = L.layerGroup([
+        L.polyline(coords, {color:'#1c3c6e', weight:5, opacity:.85}),
+        L.polyline([from, start], dashed),
+        L.polyline([end, to], dashed)
+      ]).addTo(map);
+      if (fit) map.fitBounds(L.latLngBounds(coords.concat([from, to])), {padding:[40,40]});
+      var dist = data.routes[0].distance + haversine(from, start) + haversine(end, to);
+      var mins = Math.max(1, Math.round(dist / 1.25 / 60)); // ~4,5 km/jam
+      routeText.innerHTML = 'Jalan kaki ke <b>'+p.k+' &middot; '+p.name+'</b><br>' +
+        fmtDist(dist)+' &middot; ± '+mins+' menit';
+    }).catch(function(err){
+      if (reqTarget !== routeTarget) return;
+      clearRouteLayer();
+      routeLayer = L.polyline([from, to], {color:'#1c3c6e', weight:3, dashArray:'4 6'}).addTo(map);
+      if (fit) map.fitBounds(L.latLngBounds([from, to]), {padding:[40,40]});
+      routeText.innerHTML = 'Rute jalan tidak tersedia ('+err.message+'). Garis lurus ke <b>'+p.k+' &middot; '+p.name+'</b>: ' +
+        fmtDist(haversine(from, to));
+    });
+  }
+
+  document.getElementById('routeClear').addEventListener('click', function(){
+    routeTarget = null; routeFrom = null;
+    clearRouteLayer();
+    routeBar.classList.remove('show');
+  });
+  document.addEventListener('click', function(e){
+    var b = e.target.closest('.route-btn');
+    if (b) routeTo(b.getAttribute('data-k'));
+  });
+
+  // === daftar titik + jarak ===
+  var mainList = document.getElementById('mainList');
+  var minorList = document.getElementById('minorList');
+  var rows = {};
+  POINTS.forEach(function(p){
+    var row = document.createElement('div');
+    row.className = 'poi-row';
+    row.innerHTML = '<div class="tag '+(p.main?'main':'minor')+'">'+p.k+'</div>' +
+      '<div class="poi-name">'+p.name+(p.desc?'<br><span style="color:var(--muted);font-size:11px">'+p.desc+'</span>':'')+'</div>' +
+      '<div class="poi-dist" data-k="'+p.k+'">&nbsp;</div>' +
+      '<button class="mini-btn route-btn" data-k="'+p.k+'">Rute</button>';
+    row.addEventListener('click', function(e){
+      if (e.target.closest('.route-btn')) return;
+      map.setView(pointLatLng(p), 19);
+      markers[p.k].openPopup();
+      selectPoint(p.k);
+    });
+    (p.main ? mainList : minorList).appendChild(row);
+    rows[p.k] = row;
+  });
+
+  function haversine(a, b){
+    var R = 6371000;
+    var dLat = (b[0]-a[0]) * Math.PI/180;
+    var dLon = (b[1]-a[1]) * Math.PI/180;
+    var s = Math.sin(dLat/2)*Math.sin(dLat/2) +
+      Math.cos(a[0]*Math.PI/180)*Math.cos(b[0]*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+    return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1-s));
+  }
+  function updateDistances(meLatLng){
+    POINTS.forEach(function(p){
+      var d = haversine(meLatLng, pointLatLng(p));
+      var el = rows[p.k].querySelector('.poi-dist');
+      el.textContent = d < 1000 ? Math.round(d)+' m' : (d/1000).toFixed(1)+' km';
+    });
+  }
+
+  // === mode kalibrasi ===
+  var btnCalib = document.getElementById('btnCalib');
+  var calibBar = document.getElementById('calibBar');
+  var calibText = document.getElementById('calibText');
+  var calibSet = document.getElementById('calibSet');
+  var calibOn = false;
+
+  function selectPoint(k){
+    selected = k;
+    if (calibOn){
+      var p = POINTS.find(function(pp){return pp.k===k;});
+      calibText.textContent = 'Titik dipilih: '+k+' - '+p.name+'. Tekan "Set ke GPS saya" saat berdiri di lokasi itu.';
+    }
+  }
+
+  btnCalib.addEventListener('click', function(){
+    calibOn = !calibOn;
+    btnCalib.classList.toggle('active', calibOn);
+    calibBar.classList.toggle('show', calibOn);
+    if (calibOn){
+      calibText.textContent = 'Tap salah satu titik (di peta atau daftar), lalu tekan "Set ke GPS saya" saat kamu berdiri di lokasi itu.';
+    }
+  });
+  calibSet.addEventListener('click', function(){
+    if (!selected){ alert('Pilih dulu titiknya dari daftar atau peta.'); return; }
+    if (!window._meLatLng){ alert('Aktifkan "Lokasi saya" dulu supaya GPS kamu terbaca.'); return; }
+    overrides[selected] = {lat: window._meLatLng[0], lng: window._meLatLng[1]};
+    saveOverrides();
+    var p = POINTS.find(function(pp){return pp.k===selected;});
+    renderMarker(p);
+    if (routeTarget === selected) computeRoute(false);
+    calibText.textContent = 'Titik '+selected+' dikalibrasi ke lokasi GPS kamu. Pilih titik lain atau tutup mode kalibrasi.';
+  });
+
+})();
+</script>
+</body>
+</html>
