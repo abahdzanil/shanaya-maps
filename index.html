@@ -10,6 +10,9 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""></script>
+<script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate.js"
+    integrity="sha384-MtIdllebpZyms2pw9K3YJl8BEqrKNQCdSFAySjeglab6z2PkeFdF4Lb9cDsnxQuG"
+    crossorigin=""></script>
 <style>
   :root{
     --bg:#eef1f6; --fg:#13203a; --muted:#5a6578; --accent:#1c3c6e; --accent2:#3c5a86;
@@ -45,6 +48,9 @@
   }
   .btn.primary{background:var(--accent); color:#fff; border-color:var(--accent);}
   .btn.active{background:var(--accent2); color:#fff; border-color:var(--accent2);}
+  .rotate-group{display:flex; gap:6px;}
+  .rotate-group .btn{padding:9px 11px; min-width:40px;}
+  #btnNorth span{display:inline-block; transition:transform .15s;}
   #legend.hidden, #note.hidden{display:none;}
   #legend{
     position:relative; background:var(--card); border-top:1px solid var(--line);
@@ -65,7 +71,7 @@
   .poi-dist{font-size:11px; color:var(--muted); white-space:nowrap;}
   #note{font-size:11px; color:var(--muted); padding:8px max(16px, env(safe-area-inset-left,0px)) 10px; background:var(--card);}
   .route-bar{
-    display:none; position:absolute; z-index:600; left:10px; right:10px; bottom:62px;
+    display:none; position:absolute; z-index:600; left:10px; right:10px; bottom:106px;
     background:var(--card); color:var(--fg); border:1px solid var(--line); padding:8px 10px; border-radius:6px;
     font-size:12px; box-shadow:0 1px 4px rgba(19,32,58,.25); flex-direction:column; gap:6px;
   }
@@ -107,6 +113,11 @@
     </div>
   </div>
   <div class="controls">
+    <div class="rotate-group">
+      <button class="btn" id="btnRotL" title="Putar kiri 45°">&#x27F2;</button>
+      <button class="btn" id="btnNorth" title="Kembali ke utara"><span>N&#x2191;</span></button>
+      <button class="btn" id="btnRotR" title="Putar kanan 45°">&#x27F3;</button>
+    </div>
     <button class="btn" id="btnList">Tampilkan daftar titik</button>
   </div>
 </div>
@@ -154,7 +165,10 @@
     return metersToLatLng(p.dx, p.dy);
   }
 
-  var map = L.map('map', {zoomControl:true}).setView(CENTER, 17);
+  // rotate dari plugin leaflet-rotate: dua jari di HP, Shift + drag di desktop
+  var map = L.map('map', {
+    zoomControl:true, rotate:true, touchRotate:true, shiftKeyRotate:true, rotateControl:false, bearing:0
+  }).setView(CENTER, 17);
   // tile Google langsung (tanpa API key) — lyrs=m: peta jalan, lyrs=y: satelit + label
   var gRoad = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
     maxZoom: 21, subdomains: ['mt0','mt1','mt2','mt3'], attribution: 'Map data &copy; Google'
@@ -346,6 +360,18 @@
       el.textContent = d < 1000 ? Math.round(d)+' m' : (d/1000).toFixed(1)+' km';
     });
   }
+
+  // === rotate peta ===
+  var northIcon = document.querySelector('#btnNorth span');
+  function rotateMap(deg){
+    map.setBearing(((map.getBearing() + deg) % 360 + 360) % 360);
+  }
+  function resetNorth(){ map.setBearing(0); }
+  // panah N di tombol selalu menunjuk utara sebenarnya
+  map.on('rotate', function(){ northIcon.style.transform = 'rotate('+(-map.getBearing())+'deg)'; });
+  document.getElementById('btnRotL').addEventListener('click', function(){ rotateMap(-45); });
+  document.getElementById('btnRotR').addEventListener('click', function(){ rotateMap(45); });
+  document.getElementById('btnNorth').addEventListener('click', resetNorth);
 
   // === tampilkan / sembunyikan daftar titik ===
   var btnList = document.getElementById('btnList');
