@@ -61,7 +61,6 @@
     font-size:11px; font-weight:800; color:#fff;
   }
   .tag.main{background:var(--accent);}
-  .tag.minor{background:var(--muted);}
   .poi-name{flex:1;}
   .poi-dist{font-size:11px; color:var(--muted); white-space:nowrap;}
   #note{font-size:11px; color:var(--muted); padding:8px max(16px, env(safe-area-inset-left,0px)) 10px; background:var(--card);}
@@ -115,11 +114,9 @@
 <div id="legend" class="hidden">
   <h2>Titik acara</h2>
   <div id="mainList"></div>
-  <h2>Fasilitas lain</h2>
-  <div id="minorList"></div>
 </div>
 <div id="note" class="hidden">
-  Posisi titik A–Z adalah perkiraan dari denah cetak panitia, bukan hasil survei GPS — jarak ke tiap titik di daftar hanya estimasi.
+  Posisi titik adalah perkiraan dari denah cetak panitia, bukan hasil survei GPS — jarak ke tiap titik di daftar hanya estimasi.
 </div>
 
 <script>
@@ -130,32 +127,13 @@
   // offset posisi tiap titik dalam meter (timur +, utara +) relatif ke CENTER,
   // diestimasikan dari tata letak denah cetak "Map Shanaya" — lihat catatan di bawah peta
   var POINTS = [
-    {k:'A', name:'Gate', desc:'Pintu masuk resort', dx:-110, dy:-150, main:false},
     {k:'B', name:'Lobby & Anusapati Restaurant', desc:'Sarapan - Lobby & Restaurant', dx:-80, dy:40, main:true},
     {k:'C', name:'Parking Area', desc:'Lokasi parkir & pembagian kunci kamar', dx:10, dy:-60, main:true},
     {k:'D', name:'Meeting Room', desc:'Team Building Pos 3 - Meeting Room Yard (Candi Jago/Jawi/Kidal/Sumberawan)', dx:-20, dy:60, main:true},
-    {k:'E', name:'Musholla', desc:'', dx:-150, dy:10, main:false},
     {k:'F', name:'Latar Ken Arok', desc:'Team Building Pos 2', dx:5, dy:30, main:true},
-    {k:'G', name:'Pendopo Tohjaya', desc:'', dx:25, dy:55, main:false},
-    {k:'H', name:'Altar Kendedes', desc:'', dx:55, dy:55, main:false},
     {k:'I', name:'Omah Kendedes', desc:'Venue Gala Dinner dan Api Unggun', dx:70, dy:20, main:true},
     {k:'J', name:'Pendopo Tunggul Ametung', desc:'Team Building Pos 1', dx:90, dy:-80, main:true},
-    {k:'K', name:'Amphitheater', desc:'', dx:100, dy:30, main:false},
-    {k:'L', name:'Kertanegara Villa', desc:'', dx:50, dy:140, main:false},
-    {k:'M', name:'Singhasari Villa', desc:'', dx:95, dy:-100, main:false},
-    {k:'N', name:'Shanaya Royal Villa', desc:'Kamar - Ranggawuni (area)', dx:120, dy:-140, main:false},
-    {k:'O', name:'Ranggawuni Glamping', desc:'Kamar - Ranggawuni', dx:110, dy:160, main:true},
-    {k:'P', name:'Gayatri Villa', desc:'', dx:15, dy:100, main:false},
-    {k:'Q', name:'Kertarajasa Villa', desc:'', dx:80, dy:150, main:false},
-    {k:'R', name:'Jayakatwang Villa', desc:'', dx:40, dy:190, main:false},
-    {k:'S', name:'Jayakatwang Swimming Pool', desc:'', dx:-10, dy:145, main:false},
-    {k:'T', name:'Jayakatwang Meeting Room', desc:'', dx:0, dy:130, main:false},
-    {k:'U', name:'Ranggawuni Swimming Pool', desc:'', dx:145, dy:100, main:false},
-    {k:'V', name:'Ranggawuni Restaurant & Meeting Room', desc:'', dx:130, dy:90, main:false},
-    {k:'W', name:'Main Pool', desc:'', dx:20, dy:85, main:false},
-    {k:'X', name:'Playground', desc:'', dx:-25, dy:120, main:false},
-    {k:'Y', name:'Security Post', desc:'', dx:-100, dy:-140, main:false},
-    {k:'Z', name:'Paddy Field', desc:'', dx:180, dy:-170, main:false}
+    {k:'O', name:'Ranggawuni Glamping', desc:'Kamar - Ranggawuni', dx:110, dy:160, main:true}
   ];
 
   function metersToLatLng(dx, dy){
@@ -336,7 +314,6 @@
 
   // === daftar titik + jarak ===
   var mainList = document.getElementById('mainList');
-  var minorList = document.getElementById('minorList');
   var rows = {};
   POINTS.forEach(function(p){
     var row = document.createElement('div');
@@ -350,7 +327,7 @@
       map.setView(pointLatLng(p), 19);
       markers[p.k].openPopup();
     });
-    (p.main ? mainList : minorList).appendChild(row);
+    mainList.appendChild(row);
     rows[p.k] = row;
   });
 
