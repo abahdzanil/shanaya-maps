@@ -45,6 +45,7 @@
   }
   .btn.primary{background:var(--accent); color:#fff; border-color:var(--accent);}
   .btn.active{background:var(--accent2); color:#fff; border-color:var(--accent2);}
+  #legend.hidden, #note.hidden{display:none;}
   #legend{
     position:relative; background:var(--card); border-top:1px solid var(--line);
     max-height:34vh; overflow-y:auto; padding:10px max(16px, env(safe-area-inset-left,0px));
@@ -64,13 +65,6 @@
   .poi-name{flex:1;}
   .poi-dist{font-size:11px; color:var(--muted); white-space:nowrap;}
   #note{font-size:11px; color:var(--muted); padding:8px max(16px, env(safe-area-inset-left,0px)) 10px; background:var(--card);}
-  .calib-bar{
-    display:none; position:absolute; z-index:600; left:10px; right:10px; top:10px;
-    background:var(--accent); color:#fff; padding:10px 12px; border-radius:6px; font-size:12px;
-    box-shadow:0 1px 4px rgba(19,32,58,.25); align-items:center; justify-content:space-between; gap:8px;
-  }
-  .calib-bar.show{display:flex;}
-  .calib-bar button{border:1px solid rgba(255,255,255,.4); background:transparent; color:#fff; padding:6px 10px; border-radius:5px; font-size:12px; font-weight:600;}
   .route-bar{
     display:none; position:absolute; z-index:600; left:10px; right:140px; bottom:18px;
     background:var(--card); color:var(--fg); border:1px solid var(--line); padding:8px 10px; border-radius:6px;
@@ -106,10 +100,6 @@
 
 <div style="position:relative; flex:1; min-height:0;">
   <div id="map"></div>
-  <div class="calib-bar" id="calibBar">
-    <span id="calibText">Pilih titik di daftar, lalu set ke lokasi GPS kamu sekarang</span>
-    <button id="calibSet">Set ke GPS saya</button>
-  </div>
   <div class="route-bar" id="routeBar">
     <div id="routeText"></div>
     <div class="actions">
@@ -118,18 +108,18 @@
     </div>
   </div>
   <div class="controls">
-    <button class="btn" id="btnCalib">Mode kalibrasi</button>
+    <button class="btn" id="btnList">Tampilkan daftar titik</button>
   </div>
 </div>
 
-<div id="legend">
+<div id="legend" class="hidden">
   <h2>Titik acara</h2>
   <div id="mainList"></div>
   <h2>Fasilitas lain</h2>
   <div id="minorList"></div>
 </div>
-<div id="note">
-  Posisi titik A–Z adalah perkiraan dari denah cetak panitia, bukan hasil survei GPS — jarak ke tiap titik di sidebar hanya estimasi. Saat kamu sudah di lokasi, pakai "Mode kalibrasi" untuk set ulang titik ke posisi GPS asli; perubahan tersimpan di browser ini saja.
+<div id="note" class="hidden">
+  Posisi titik A–Z adalah perkiraan dari denah cetak panitia, bukan hasil survei GPS — jarak ke tiap titik di daftar hanya estimasi.
 </div>
 
 <script>
@@ -185,9 +175,6 @@
     if (overrides[p.k]) return [overrides[p.k].lat, overrides[p.k].lng];
     return metersToLatLng(p.dx, p.dy);
   }
-  function saveOverrides(){
-    try { localStorage.setItem('shanaya_calib', JSON.stringify(overrides)); } catch(e){}
-  }
 
   var map = L.map('map', {zoomControl:true}).setView(CENTER, 17);
   // tile Google langsung (tanpa API key) — lyrs=m: peta jalan, lyrs=y: satelit + label
@@ -219,7 +206,6 @@
   }
 
   var markers = {};
-  var selected = null;
 
   function renderMarker(p){
     if (markers[p.k]) map.removeLayer(markers[p.k]);
@@ -229,7 +215,6 @@
       (overrides[p.k] ? '<br><span style="color:#3c5a86">terkalibrasi GPS</span>' : '') +
       '<br><button class="mini-btn primary route-btn" data-k="'+p.k+'" style="margin-top:6px">Rute jalan kaki</button>';
     m.bindPopup(html);
-    m.on('click', function(){ selectPoint(p.k); });
     markers[p.k] = m;
   }
   POINTS.forEach(renderMarker);
@@ -364,7 +349,6 @@
       if (e.target.closest('.route-btn')) return;
       map.setView(pointLatLng(p), 19);
       markers[p.k].openPopup();
-      selectPoint(p.k);
     });
     (p.main ? mainList : minorList).appendChild(row);
     rows[p.k] = row;
@@ -386,38 +370,17 @@
     });
   }
 
-  // === mode kalibrasi ===
-  var btnCalib = document.getElementById('btnCalib');
-  var calibBar = document.getElementById('calibBar');
-  var calibText = document.getElementById('calibText');
-  var calibSet = document.getElementById('calibSet');
-  var calibOn = false;
-
-  function selectPoint(k){
-    selected = k;
-    if (calibOn){
-      var p = POINTS.find(function(pp){return pp.k===k;});
-      calibText.textContent = 'Titik dipilih: '+k+' - '+p.name+'. Tekan "Set ke GPS saya" saat berdiri di lokasi itu.';
-    }
-  }
-
-  btnCalib.addEventListener('click', function(){
-    calibOn = !calibOn;
-    btnCalib.classList.toggle('active', calibOn);
-    calibBar.classList.toggle('show', calibOn);
-    if (calibOn){
-      calibText.textContent = 'Tap salah satu titik (di peta atau daftar), lalu tekan "Set ke GPS saya" saat kamu berdiri di lokasi itu.';
-    }
-  });
-  calibSet.addEventListener('click', function(){
-    if (!selected){ alert('Pilih dulu titiknya dari daftar atau peta.'); return; }
-    if (!window._meLatLng){ alert('Aktifkan "Lokasi saya" dulu supaya GPS kamu terbaca.'); return; }
-    overrides[selected] = {lat: window._meLatLng[0], lng: window._meLatLng[1]};
-    saveOverrides();
-    var p = POINTS.find(function(pp){return pp.k===selected;});
-    renderMarker(p);
-    if (routeTarget === selected) computeRoute(false);
-    calibText.textContent = 'Titik '+selected+' dikalibrasi ke lokasi GPS kamu. Pilih titik lain atau tutup mode kalibrasi.';
+  // === tampilkan / sembunyikan daftar titik ===
+  var btnList = document.getElementById('btnList');
+  var legend = document.getElementById('legend');
+  var note = document.getElementById('note');
+  btnList.addEventListener('click', function(){
+    var show = legend.classList.contains('hidden');
+    legend.classList.toggle('hidden', !show);
+    note.classList.toggle('hidden', !show);
+    btnList.classList.toggle('active', show);
+    btnList.textContent = show ? 'Sembunyikan daftar' : 'Tampilkan daftar titik';
+    map.invalidateSize();
   });
 
 })();
